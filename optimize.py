@@ -6,7 +6,8 @@ from __future__ import division
 from __future__ import print_function
 
 """
-Collection of optimization routines. 
+Collection of optimization routines. Written during learning the methods. 
+Implementation probably far from optimal.
 
 Emphasis on simple interface. Performance or generality may be lacking.
 
@@ -153,6 +154,12 @@ def pso(f, lb, ub,
             
             # Update location
             x[p]  += v[p]
+            
+            # Bound 
+            for dim in range(dims):
+                x[p,dim] = np.clip(x[p,dim], lb[dim], ub[dim])
+            
+            
             # Update particle value
             val[p] = f(x[p])
             
@@ -172,7 +179,11 @@ def pso(f, lb, ub,
     # Call scipy minimize to finish the end value        
     if finalize:
         import scipy.optimize as spoptimize
-        res =spoptimize.minimize(f, swarm_best_x)
+        bnds = []
+        for dim in range(dims):
+            bnds.append((lb[dim], ub[dim]))
+        
+        res =spoptimize.minimize(f, swarm_best_x,bounds=bnds)
         swarm_best_x    = res.x
         swarm_best_val  = res.fun
         if full:
@@ -204,28 +215,48 @@ if __name__ == "__main__":
     print("START")
     
     def test_func(xv):
-        # Ackley function
-        assert len(xv) == 2
-        x = xv[0]
-        y = xv[1]
+        #https://en.wikipedia.org/wiki/Test_functions_for_optimization
         
-        return (-20*np.exp(-0.2*np.sqrt(0.5*(x**2+y**2)))
-                -   np.exp(0.5*(np.cos(2*np.pi*x)+np.cos(2*np.pi*y)))
-                + np.e + 20
-                ) 
+        def ackley(xv):
+            # Ackley function
+            assert len(xv) == 2
+            x = xv[0]
+            y = xv[1]
+            
+            return (-20*np.exp(-0.2*np.sqrt(0.5*(x**2+y**2)))
+                    -   np.exp(0.5*(np.cos(2*np.pi*x)+np.cos(2*np.pi*y)))
+                    + np.e + 20
+                    ) 
+        def goldstein_price(xv):
+            # Ackley function
+            assert len(xv) == 2
+            x = xv[0]
+            y = xv[1]
+            
+            return ((1 + (x+y+1)**2 * (19-14*x+3*x**2-14*y+6*x*y+3*y**2))
+                    *
+                    (30+(2*x-3*y)**2 * (18-32*x+12*x**2+48*y-36*x*y+27*y**2))
+                    
+                    ) 
+        
+        return ackley(xv)
+#        return goldstein_price(xv)
     
     def main():
-        extend = 10
+        extend = 1.2
         n = 100
         x = np.linspace(-extend,extend,n)
         y = np.linspace(-extend,extend,n)
+
         X, Y = np.meshgrid(x,y)
         
         test_vals = test_func([X,Y])
         
         fig = plt.figure()
         ax = fig.gca(projection='3d')
-        ax.plot_surface(X,Y,test_vals,cmap=cm.coolwarm,alpha=0.2)
+        ax.plot_surface(X,Y,test_vals,cmap=cm.coolwarm,alpha=0.4)
+        ax.set_ylabel("y")
+        ax.set_xlabel("x")
         
         lb = [-extend,-extend]
         ub = [extend,extend]
